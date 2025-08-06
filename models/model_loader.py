@@ -60,10 +60,8 @@ def load_model(model_choice):
         model = Qwen2VLForConditionalGeneration.from_pretrained(
             "Qwen/Qwen2-VL-7B-Instruct",
             torch_dtype=torch.float16 if device != 'cpu' else torch.float32,
-            device_map="auto"
-        )
+        ).to(device) # Move to device immediately after loading
         processor = AutoProcessor.from_pretrained("Qwen/Qwen2-VL-7B-Instruct")
-        model.to(device)
         _model_cache[model_choice] = (model, processor, device)
         logger.info("Qwen model loaded and cached.")
         return _model_cache[model_choice]
@@ -82,10 +80,8 @@ def load_model(model_choice):
         model = MllamaForConditionalGeneration.from_pretrained(
             model_id,
             torch_dtype=torch.float16 if device != 'cpu' else torch.float32,
-            device_map="auto"
-        )
+        ).to(device) # Move to device immediately after loading
         processor = AutoProcessor.from_pretrained(model_id)
-        model.to(device)
         _model_cache[model_choice] = (model, processor, device)
         logger.info("Llama-Vision model loaded and cached.")
         return _model_cache[model_choice]
@@ -118,8 +114,7 @@ def load_model(model_choice):
             'allenai/MolmoE-1B-0924',
             trust_remote_code=True,
             torch_dtype='auto',
-            device_map='auto'
-        )
+        ).to(device) # Move to device immediately after loading
         model = AutoModelForCausalLM.from_pretrained(
             'allenai/MolmoE-1B-0924',
             trust_remote_code=True,

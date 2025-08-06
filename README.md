@@ -283,3 +283,24 @@ Contributions are welcome! Please follow these steps:
 
 [![Star History Chart](https://api.star-history.com/svg?repos=PromtEngineer/localGPT-Vision&type=Date)](https://star-history.com/#PromtEngineer/localGPT-Vision&Date)
 
+
+
+Export CUDA_HOME
+
+Run
+
+```
+which nvcc
+```
+
+which outputs something like
+
+```
+export CUDA_HOME=/home/dnth/Desktop/localGPT-Vision/.pixi/envs/default/bin/nvcc
+```
+
+then export the folder
+
+```
+export CUDA_HOME=/home/dnth/Desktop/localGPT-Vision/.pixi/envs/default
+```

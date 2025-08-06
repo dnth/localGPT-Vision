@@ -9,7 +9,7 @@ google-generativeai
 openai
 docx2pdf
 qwen-vl-utils
-vllm>=0.6.1.post1; sys_platform != 'darwin'
+vllm
 mistral_common>=1.4.1
 einops
 mistral_common[opencv]

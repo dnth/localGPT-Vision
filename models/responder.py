@@ -224,23 +224,26 @@ def generate_response(images, query, session_id, resized_height=280, resized_wid
             return result, valid_images
         
         elif model_choice == "molmo":
-            model, processor, device = load_model('molmo')
-            model = model.half()  # Convert model to half precision
-            pil_images = []
-            for img_path in valid_images[:1]:  # Process only the first image for now
-                if os.path.exists(img_path):
-                    try:
-                        img = Image.open(img_path).convert('RGB')
-                        pil_images.append(img)
-                    except Exception as e:
-                        logger.error(f"Error opening image {img_path}: {e}")
-                else:
-                    logger.warning(f"Image file not found: {img_path}")
-
-            if not pil_images:
-                return "No images could be loaded for analysis.", []
-
             try:
+                model, processor, device = load_model('molmo')
+                # Move model to device before converting to half precision
+                model = model.to(device)
+                if device == "cuda":
+                    model = model.half()  # Only convert to half precision if on GPU
+                pil_images = []
+                for img_path in valid_images[:1]:  # Process only the first image for now
+                    if os.path.exists(img_path):
+                        try:
+                            img = Image.open(img_path).convert('RGB')
+                            pil_images.append(img)
+                        except Exception as e:
+                            logger.error(f"Error opening image {img_path}: {e}")
+                    else:
+                        logger.warning(f"Image file not found: {img_path}")
+
+                if not pil_images:
+                    return "No images could be loaded for analysis.", []
+
                 # Process the images and text
                 inputs = processor.process(
                     images=pil_images,
@@ -249,9 +252,9 @@ def generate_response(images, query, session_id, resized_height=280, resized_wid
 
                 # Move inputs to the correct device and make a batch of size 1
                 # Convert float tensors to half precision, but keep integer tensors as they are
-                inputs = {k: (v.to(device).unsqueeze(0).half() if v.dtype in [torch.float32, torch.float64] else 
-                            v.to(device).unsqueeze(0))
-                        if isinstance(v, torch.Tensor) else v 
+                inputs = {k: (v.unsqueeze(0).to(device).half() if v.dtype in [torch.float32, torch.float64] and device == "cuda" else
+                            v.unsqueeze(0).to(device))
+                        if isinstance(v, torch.Tensor) else v
                         for k, v in inputs.items()}
 
                 # Generate output
@@ -274,7 +277,7 @@ def generate_response(images, query, session_id, resized_height=280, resized_wid
             finally:
                 # Close the opened images to free up resources
                 for img in pil_images:
-                    img.close()              
+                    img.close()
         elif model_choice == 'groq-llama-vision':
             client = load_model('groq-llama-vision')
 

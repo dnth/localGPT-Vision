@@ -172,3 +172,7 @@ SOURCE_DOCUMENTS/.DS_Store
 sessions/
 static/images/
 uploaded_documents/
+
+# pixi environments
+.pixi
+*.egg-info
