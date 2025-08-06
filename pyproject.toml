@@ -1,9 +1,30 @@
 [project]
-authors = [{name = "dnth", email = "dickson.neoh@gmail.com"}]
+authors = [{ name = "dnth", email = "dickson.neoh@gmail.com" }]
 name = "localGPT-Vision"
 requires-python = ">= 3.11, < 3.13"
 version = "0.1.0"
-dependencies = ["flask>=3.1.1,<4", "byaldi>=0.0.7,<0.0.8", "cmake>=4.0.3,<5", "python-poppler", "pkgconfig>=1.5.5,<2", "torch>=2.7.1,<3", "torchvision>=0.22.1,<0.23", "google-generativeai>=0.8.5,<0.9", "openai>=1.99.1,<2", "docx2pdf>=0.1.8,<0.2", "qwen-vl-utils>=0.0.11,<0.0.12", "mistral-common>=1.8.3,<2", "einops>=0.8.1,<0.9", "mistral-inference>=1.6.0,<2", "groq>=0.31.0,<0.32", "markdown>=3.8.2,<4", "hf-transfer>=0.1.9,<0.2", "ollama>=0.5.2,<0.6", "vllm>=0.1.2,<0.2", "dotenv>=0.9.9,<0.10"]
+dependencies = [
+    "flask>=3.1.1,<4",
+    "byaldi>=0.0.7,<0.0.8",
+    "cmake>=4.0.3,<5",
+    "python-poppler",
+    "pkgconfig>=1.5.5,<2",
+    "torch>=2.7.1,<3",
+    "torchvision>=0.22.1,<0.23",
+    "google-generativeai>=0.8.5,<0.9",
+    "openai>=1.99.1,<2",
+    "docx2pdf>=0.1.8,<0.2",
+    "qwen-vl-utils>=0.0.11,<0.0.12",
+    "mistral-common>=1.8.3,<2",
+    "einops>=0.8.1,<0.9",
+    "mistral-inference>=1.6.0,<2",
+    "groq>=0.31.0,<0.32",
+    "markdown>=3.8.2,<4",
+    "hf-transfer>=0.1.9,<0.2",
+    "ollama>=0.5.2,<0.6",
+    "vllm>=0.1.2,<0.2",
+    "dotenv>=0.9.9,<0.10",
+]
 
 [build-system]
 build-backend = "hatchling.build"
