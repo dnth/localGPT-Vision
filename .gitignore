@@ -171,6 +171,7 @@ SOURCE_DOCUMENTS/.DS_Store
 .byaldi/
 sessions/
 static/images/
+static/images_streamlit/
 uploaded_documents/
 uploaded_documents_streamlit/
 .byaldi_streamlit/

@@ -312,7 +312,7 @@ def retrieve_image_paths_for_current_session(query: str, k: int = 3) -> List[str
         if rag is None:
             st.error("RAG model not found for this session. Please upload and index documents first.")
             return []
-    return retrieve_documents(rag, query, sid, k=k)  # returns relative paths from static folder
+    return retrieve_documents(rag, query, sid, k=k, app_type='streamlit')  # returns relative paths from static folder
 
 def render_images_horizontally(images: List[str], max_width: int = 200):
     """
@@ -320,7 +320,7 @@ def render_images_horizontally(images: List[str], max_width: int = 200):
     
     Args:
         images: List of relative image paths from static folder
-        max_width: Maximum width for each image in pixels
+        max_width: Maximum width for each image in pixels (only affects chat display, not fullscreen)
     """
     if not images:
         return
@@ -333,7 +333,8 @@ def render_images_horizontally(images: List[str], max_width: int = 200):
         with col2:
             img_path = os.path.join(STATIC_FOLDER, images[0])
             if os.path.exists(img_path):
-                st.image(img_path, width=max_width)
+                # Don't set width parameter to allow fullscreen to show native resolution
+                st.image(img_path, use_container_width=True)
     else:
         # Multiple images - create equal columns
         cols = st.columns(num_images)
@@ -341,7 +342,8 @@ def render_images_horizontally(images: List[str], max_width: int = 200):
             img_path = os.path.join(STATIC_FOLDER, rel_path)
             if os.path.exists(img_path):
                 with cols[i]:
-                    st.image(img_path, width=max_width)
+                    # Don't set width parameter to allow fullscreen to show native resolution
+                    st.image(img_path, use_container_width=True)
 
 def render_chat_history(chat_history: List[Dict[str, Any]]):
     for msg in chat_history:
@@ -360,58 +362,225 @@ def render_chat_history(chat_history: List[Dict[str, Any]]):
                     render_images_horizontally(images, max_width=280)
 
 def sidebar_ui():
-    st.sidebar.title("Sessions")
-    sessions = list_chat_sessions()
-    # Select session
-    if sessions:
-        names = [f"{s['name']} ({s['id'][:8]})" for s in sessions]
-        ids = [s["id"] for s in sessions]
-        try:
-            curr_index = ids.index(st.session_state.current_session_id)
-        except ValueError:
-            curr_index = 0
-        selected = st.sidebar.selectbox("Select session", options=list(range(len(ids))), format_func=lambda i: names[i], index=curr_index)
-        st.session_state.current_session_id = ids[selected]
-    else:
-        st.sidebar.info("No sessions found.")
-
-    # Create, rename, delete
-    col1, col2, col3 = st.sidebar.columns(3)
-    if col1.button("New"):
-        create_new_session()
-        st.experimental_rerun()
-    new_name = st.sidebar.text_input("Rename session", value=read_session_data(st.session_state.current_session_id).get("session_name", "Untitled Session"))
-    if col2.button("Rename"):
-        rename_current_session(new_name)
-        st.experimental_rerun()
-    if col3.button("Delete"):
-        delete_session(st.session_state.current_session_id)
-        st.experimental_rerun()
+    """Enhanced sidebar with improved UX and visual hierarchy."""
+    
+    # Header with branding
+    st.sidebar.markdown("### 🤖 LocalGPT Vision")
+    st.sidebar.markdown("---")
+    
+    # Session Management Section
+    with st.sidebar.container():
+        st.markdown("#### 📁 Sessions")
+        
+        sessions = list_chat_sessions()
+        current_session_data = read_session_data(st.session_state.current_session_id)
+        
+        if sessions:
+            # Enhanced session display with metadata
+            session_options = []
+            session_ids = []
+            
+            for s in sessions:
+                session_data = read_session_data(s["id"])
+                file_count = len(session_data.get("indexed_files", []))
+                chat_count = len(session_data.get("chat_history", []))
+                
+                # Create rich session labels
+                if s["id"] == st.session_state.current_session_id:
+                    label = f"🟢 {s['name']}"
+                else:
+                    label = f"⚪ {s['name']}"
+                
+                # Add metadata
+                if file_count > 0 or chat_count > 0:
+                    label += f" ({file_count}📄, {chat_count}💬)"
+                
+                session_options.append(label)
+                session_ids.append(s["id"])
+            
+            try:
+                curr_index = session_ids.index(st.session_state.current_session_id)
+            except ValueError:
+                curr_index = 0
+            
+            selected_idx = st.selectbox(
+                "Choose session",
+                options=list(range(len(session_ids))),
+                format_func=lambda i: session_options[i],
+                index=curr_index,
+                key="session_selector"
+            )
+            
+            if session_ids[selected_idx] != st.session_state.current_session_id:
+                st.session_state.current_session_id = session_ids[selected_idx]
+                st.rerun()
+        else:
+            st.info("No sessions available")
+        
+        # Session Actions in a more intuitive layout
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("➕ New Session", use_container_width=True):
+                create_new_session()
+                st.rerun()
+        
+        with col2:
+            # Quick rename with inline editing
+            if st.button("✏️ Rename", use_container_width=True):
+                st.session_state.show_rename = not st.session_state.get("show_rename", False)
+        
+        # Inline rename field (only shown when needed)
+        if st.session_state.get("show_rename", False):
+            current_name = current_session_data.get("session_name", "Untitled Session")
+            new_name = st.text_input(
+                "New name:",
+                value=current_name,
+                key="rename_input",
+                placeholder="Enter session name..."
+            )
+            
+            col_save, col_cancel = st.columns(2)
+            with col_save:
+                if st.button("💾 Save", use_container_width=True):
+                    if new_name.strip():
+                        rename_current_session(new_name.strip())
+                    st.session_state.show_rename = False
+                    st.rerun()
+            
+            with col_cancel:
+                if st.button("❌ Cancel", use_container_width=True):
+                    st.session_state.show_rename = False
+                    st.rerun()
+        
+        # Delete with confirmation
+        if st.button("🗑️ Delete Session", use_container_width=True, type="secondary"):
+            st.session_state.show_delete_confirm = not st.session_state.get("show_delete_confirm", False)
+        
+        if st.session_state.get("show_delete_confirm", False):
+            st.warning("⚠️ This action cannot be undone!")
+            col_confirm, col_cancel = st.columns(2)
+            
+            with col_confirm:
+                if st.button("🗑️ Confirm Delete", use_container_width=True, type="primary"):
+                    delete_session(st.session_state.current_session_id)
+                    st.session_state.show_delete_confirm = False
+                    st.rerun()
+            
+            with col_cancel:
+                if st.button("↩️ Cancel", use_container_width=True):
+                    st.session_state.show_delete_confirm = False
+                    st.rerun()
 
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Settings")
-    st.session_state.indexer_model = st.sidebar.text_input("Indexer model", value=st.session_state.indexer_model, help="Byaldi indexer, e.g., vidore/colpali")
-    # Map display names to internal keys
-    display_to_key = {
-        "Qwen": "qwen",
-        "Gemini (legacy)": "gemini",
-        "Gemini 2": "gemini2",
-        "Llama Vision": "llama-vision",
-        "Pixtral": "pixtral",
-        "Molmo": "molmo",
-        "Groq Llama Vision": "groq-llama-vision",
-        "Ollama Llama Vision": "ollama-llama-vision",
-    }
-    key_to_display = {v: k for k, v in display_to_key.items()}
-    display_options = list(display_to_key.keys())
-    current_display = key_to_display.get(st.session_state.generation_model, "Qwen")
-    selected_display = st.sidebar.selectbox("Generation model", options=display_options, index=display_options.index(current_display))
-    st.session_state.generation_model = display_to_key[selected_display]
-    st.session_state.resized_height = st.sidebar.number_input("Resized height", min_value=64, max_value=2048, value=int(st.session_state.resized_height), step=16)
-    st.session_state.resized_width = st.sidebar.number_input("Resized width", min_value=64, max_value=2048, value=int(st.session_state.resized_width), step=16)
+    
+    # Current Session Info Panel
+    with st.sidebar.container():
+        st.markdown("#### 📊 Current Session")
+        
+        # Session statistics
+        file_count = len(current_session_data.get("indexed_files", []))
+        chat_count = len(current_session_data.get("chat_history", []))
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("📄 Files", file_count)
+        with col2:
+            st.metric("💬 Messages", chat_count)
+        
+        # Quick session health check
+        if file_count == 0:
+            st.info("💡 Upload documents to get started")
+        elif chat_count == 0:
+            st.info("💡 Ready to chat about your documents")
+        else:
+            st.success("✅ Session active")
 
     st.sidebar.markdown("---")
-    st.sidebar.caption("Indexes stored under .byaldi_streamlit. Uploaded documents under uploaded_documents_streamlit. Retrieved images under static/images_streamlit.")
+    
+    # Settings Section with Progressive Disclosure
+    with st.sidebar.expander("⚙️ Advanced Settings", expanded=False):
+        st.markdown("##### 🧠 AI Models")
+        
+        # User-friendly model selection
+        model_options = {
+            "🚀 Qwen (Recommended)": "qwen",
+            "💎 Gemini 2.0": "gemini2",
+            "🔮 Gemini (Legacy)": "gemini",
+            "🦙 Llama Vision": "llama-vision",
+            "🎯 Pixtral": "pixtral",
+            "🎨 Molmo": "molmo",
+            "⚡ Groq Llama": "groq-llama-vision",
+            "🏠 Ollama Llama": "ollama-llama-vision",
+        }
+        
+        current_display = next(
+            (k for k, v in model_options.items() if v == st.session_state.generation_model),
+            "🚀 Qwen (Recommended)"
+        )
+        
+        selected_model = st.selectbox(
+            "Generation Model",
+            options=list(model_options.keys()),
+            index=list(model_options.keys()).index(current_display),
+            help="Choose the AI model for generating responses"
+        )
+        st.session_state.generation_model = model_options[selected_model]
+        
+        # Indexer model with help text
+        st.session_state.indexer_model = st.text_input(
+            "Indexer Model",
+            value=st.session_state.indexer_model,
+            help="Advanced: Byaldi indexer model (e.g., vidore/colpali)"
+        )
+        
+        st.markdown("##### 🖼️ Image Processing")
+        
+        # Image dimension controls with presets
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📱 Small (200px)", use_container_width=True):
+                st.session_state.resized_height = 200
+                st.session_state.resized_width = 200
+                st.rerun()
+        
+        with col2:
+            if st.button("🖥️ Large (400px)", use_container_width=True):
+                st.session_state.resized_height = 400
+                st.session_state.resized_width = 400
+                st.rerun()
+        
+        # Fine-grained controls
+        st.session_state.resized_height = st.slider(
+            "Height (px)",
+            min_value=64,
+            max_value=1024,
+            value=int(st.session_state.resized_height),
+            step=16,
+            help="Image height for processing"
+        )
+        
+        st.session_state.resized_width = st.slider(
+            "Width (px)",
+            min_value=64,
+            max_value=1024,
+            value=int(st.session_state.resized_width),
+            step=16,
+            help="Image width for processing"
+        )
+
+    # System Information (Collapsible)
+    with st.sidebar.expander("ℹ️ System Info", expanded=False):
+        st.caption("**Storage Locations:**")
+        st.caption("• Sessions: `sessions_streamlit/`")
+        st.caption("• Documents: `uploaded_documents_streamlit/`")
+        st.caption("• Images: `static/images_streamlit/`")
+        st.caption("• Indexes: `.byaldi_streamlit/`")
+        
+        # System status indicators
+        st.caption("**System Status:**")
+        rag_loaded = st.session_state.current_session_id in RAG_MODELS
+        st.caption(f"• RAG Model: {'✅ Loaded' if rag_loaded else '⏳ Not loaded'}")
 
 def upload_ui():
     st.subheader("Upload and Index Documents")
