@@ -258,9 +258,10 @@ def render_chat_history(chat_history: List[Dict[str, Any]]):
                 for rel in images:
                     img_path = os.path.join(STATIC_FOLDER, rel)
                     if os.path.exists(img_path):
-                        # Use HTML to render image with thumbnail class for modal functionality
-                        img_html = f'<img src="{rel}" class="img-thumbnail" style="max-width: 150px; max-height: 150px; width: auto; height: auto; object-fit: contain; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; padding: 4px; background-color: #f9f9f9;" />'
-                        st.markdown(img_html, unsafe_allow_html=True)
+                        # Use a narrow column to constrain display size while preserving original image
+                        col1, col2 = st.columns([1, 4])
+                        with col1:
+                            st.image(img_path)
 
 def sidebar_ui():
     st.sidebar.title("Sessions")
@@ -381,15 +382,9 @@ def chat_ui():
                 # Parse markdown to HTML for persistence to match Flask behavior
                 parsed_response = Markup(markdown.markdown(response_text))
 
-                # Convert used absolute paths back to paths relative to STATIC_FOLDER for rendering
-                relative_images = []
-                for p in used_images_abs or []:
-                    try:
-                        rel = os.path.relpath(p, STATIC_FOLDER)
-                    except Exception:
-                        # Fallback: if already relative
-                        rel = p
-                    relative_images.append(rel)
+                # Use the original retrieved images instead of the processed ones for display
+                # This ensures fullscreen shows the original full-resolution images
+                relative_images = retrieved_images
 
                 # Update chat history and persist
                 data["chat_history"].append({"role": "user", "content": query})
@@ -406,10 +401,13 @@ def chat_ui():
                     st.write(query)
                 with st.chat_message("assistant"):
                     st.markdown(str(parsed_response), unsafe_allow_html=True)
-                    for rel in relative_images:
+                    for rel in retrieved_images:
                         img_path = os.path.join(STATIC_FOLDER, rel)
                         if os.path.exists(img_path):
-                            st.image(img_path)
+                            # Use a narrow column to constrain display size while preserving original image
+                            col1, col2 = st.columns([1, 4])
+                            with col1:
+                                st.image(img_path)
             except Exception as e:
                 st.error(f"An error occurred while generating the response: {e}")
 
