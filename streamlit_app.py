@@ -3,6 +3,7 @@ import json
 import uuid
 import hashlib
 from typing import Dict, Any, List, Tuple
+from datetime import datetime
 
 import streamlit as st
 from markupsafe import Markup
@@ -47,6 +48,77 @@ def _index_dir_version(index_dir: str) -> float:
         return 0.0
 
 # ------------- Utility functions ------------- #
+
+def get_file_icon(filename: str) -> str:
+    """Return an appropriate emoji icon based on file extension."""
+    ext = os.path.splitext(filename.lower())[1]
+    icon_map = {
+        '.pdf': '📄',
+        '.doc': '📝', '.docx': '📝',
+        '.txt': '📄',
+        '.md': '📝',
+        '.png': '🖼️', '.jpg': '🖼️', '.jpeg': '🖼️', '.gif': '🖼️', '.bmp': '🖼️', '.svg': '🖼️',
+        '.mp4': '🎥', '.avi': '🎥', '.mov': '🎥', '.mkv': '🎥',
+        '.mp3': '🎵', '.wav': '🎵', '.flac': '🎵',
+        '.zip': '📦', '.rar': '📦', '.7z': '📦',
+        '.xlsx': '📊', '.xls': '📊', '.csv': '📊',
+        '.ppt': '📊', '.pptx': '📊',
+        '.py': '🐍', '.js': '📜', '.html': '🌐', '.css': '🎨',
+        '.json': '📋', '.xml': '📋', '.yaml': '📋', '.yml': '📋',
+    }
+    return icon_map.get(ext, '📄')
+
+def get_file_size(filepath: str) -> str:
+    """Get human-readable file size."""
+    try:
+        size_bytes = os.path.getsize(filepath)
+        if size_bytes == 0:
+            return "0 B"
+        size_names = ["B", "KB", "MB", "GB"]
+        i = 0
+        while size_bytes >= 1024 and i < len(size_names) - 1:
+            size_bytes /= 1024.0
+            i += 1
+        return f"{size_bytes:.1f} {size_names[i]}"
+    except OSError:
+        return "Unknown"
+
+def get_file_modified_time(filepath: str) -> str:
+    """Get human-readable file modification time."""
+    try:
+        mtime = os.path.getmtime(filepath)
+        return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+    except OSError:
+        return "Unknown"
+
+def extract_original_filename(hashed_filename: str) -> str:
+    """Extract original filename from hashed filename format: base_hash.ext"""
+    # Remove the hash suffix (last 32 characters before extension)
+    base, ext = os.path.splitext(hashed_filename)
+    if len(base) > 32 and base[-33] == '_':
+        return base[:-33] + ext
+    return hashed_filename
+
+def render_indexed_files(indexed_files: List[str], session_id: str):
+    """Render indexed files in a simplified list view."""
+    if not indexed_files:
+        st.info("No files have been indexed yet. Upload some documents to get started!")
+        return
+    
+    # Put the indexed files in a collapsible expander
+    with st.expander(f"📚 Indexed Files ({len(indexed_files)})", expanded=True):
+        # Simple list view of files
+        for filename in indexed_files:
+            original_name = extract_original_filename(filename)
+            file_icon = get_file_icon(filename)
+            
+            # Get file size for display
+            file_path = os.path.join(session_uploads_folder(session_id), filename)
+            file_size = get_file_size(file_path) if os.path.exists(file_path) else "Unknown"
+            
+            # Display as a simple row with icon, name, and size
+            st.markdown(f"{file_icon} **{original_name}** `({file_size})`")
+    
 
 def session_json_path(session_id: str) -> str:
     return os.path.join(SESSION_FOLDER, f"{session_id}.json")
@@ -372,11 +444,9 @@ def upload_ui():
                 else:
                     st.error(msg)
 
-    # Show indexed files
+    # Show indexed files with enhanced display
     data = read_session_data(st.session_state.current_session_id)
-    if data.get("indexed_files"):
-        st.write("Indexed files:")
-        st.write(data["indexed_files"])
+    render_indexed_files(data.get("indexed_files", []), st.session_state.current_session_id)
 
 def chat_ui():
     st.subheader("Chat")
@@ -387,49 +457,65 @@ def chat_ui():
     # Streamlit chat input for new message
     query = st.chat_input("Ask about your documents...")
     if query:
-        with st.spinner("Retrieving documents and generating response..."):
-            # Retrieve relevant images
-            retrieved_images = retrieve_image_paths_for_current_session(query, k=3)
-            # Convert to absolute filesystem paths for the responder
-            full_image_paths = [os.path.join(STATIC_FOLDER, rel) for rel in retrieved_images]
+        # Immediately display the user message
+        with st.chat_message("user"):
+            st.write(query)
+        
+        # Add user message to chat history and persist immediately
+        data["chat_history"].append({"role": "user", "content": query})
+        
+        # If first interaction, set session_name
+        if len(data["chat_history"]) == 1:
+            data["session_name"] = query[:50]
+        
+        write_session_data(sid, data)
+        
+        # Show loading indicator for assistant response
+        with st.chat_message("assistant"):
+            with st.spinner("Retrieving documents and generating response..."):
+                # Create placeholder for the response
+                response_placeholder = st.empty()
+                images_placeholder = st.empty()
+                
+                try:
+                    # Retrieve relevant images
+                    retrieved_images = retrieve_image_paths_for_current_session(query, k=3)
+                    # Convert to absolute filesystem paths for the responder
+                    full_image_paths = [os.path.join(STATIC_FOLDER, rel) for rel in retrieved_images]
 
-            try:
-                response_text, used_images_abs = generate_response(
-                    full_image_paths,
-                    query,
-                    sid,
-                    int(st.session_state.resized_height),
-                    int(st.session_state.resized_width),
-                    st.session_state.generation_model
-                )
+                    response_text, used_images_abs = generate_response(
+                        full_image_paths,
+                        query,
+                        sid,
+                        int(st.session_state.resized_height),
+                        int(st.session_state.resized_width),
+                        st.session_state.generation_model
+                    )
 
-                # Parse markdown to HTML for persistence to match Flask behavior
-                parsed_response = Markup(markdown.markdown(response_text))
+                    # Parse markdown to HTML for persistence to match Flask behavior
+                    parsed_response = Markup(markdown.markdown(response_text))
 
-                # Use the original retrieved images instead of the processed ones for display
-                # This ensures fullscreen shows the original full-resolution images
-                relative_images = retrieved_images
+                    # Use the original retrieved images instead of the processed ones for display
+                    # This ensures fullscreen shows the original full-resolution images
+                    relative_images = retrieved_images
 
-                # Update chat history and persist
-                data["chat_history"].append({"role": "user", "content": query})
-                data["chat_history"].append({"role": "assistant", "content": str(parsed_response), "images": relative_images})
+                    # Update chat history with assistant response and persist
+                    data["chat_history"].append({"role": "assistant", "content": str(parsed_response), "images": relative_images})
+                    write_session_data(sid, data)
 
-                # If first interaction, set session_name
-                if len(data["chat_history"]) == 2:
-                    data["session_name"] = query[:50]
-
-                write_session_data(sid, data)
-
-                # Re-render the last two messages
-                with st.chat_message("user"):
-                    st.write(query)
-                with st.chat_message("assistant"):
-                    st.markdown(str(parsed_response), unsafe_allow_html=True)
-                    # Render retrieved images horizontally
+                    # Display the final response in the placeholder
+                    with response_placeholder.container():
+                        st.markdown(str(parsed_response), unsafe_allow_html=True)
+                    
+                    # Display retrieved images in the images placeholder
                     if retrieved_images:
-                        render_images_horizontally(retrieved_images, max_width=280)
-            except Exception as e:
-                st.error(f"An error occurred while generating the response: {e}")
+                        with images_placeholder.container():
+                            render_images_horizontally(retrieved_images, max_width=280)
+                            
+                except Exception as e:
+                    # Display error in the response placeholder
+                    with response_placeholder.container():
+                        st.error(f"An error occurred while generating the response: {e}")
 
 def main():
     st.set_page_config(page_title="LocalGPT-Vision (Streamlit)", layout="wide")

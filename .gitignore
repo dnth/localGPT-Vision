@@ -172,6 +172,9 @@ SOURCE_DOCUMENTS/.DS_Store
 sessions/
 static/images/
 uploaded_documents/
+uploaded_documents_streamlit/
+.byaldi_streamlit/
+sessions_streamlit/
 
 # pixi environments
 .pixi
