@@ -2,7 +2,9 @@
 
 /* Customize chat window */
 .chat-window {
-    background-color: #f8f9fa;
+    background-color: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
     border-radius: 5px;
     padding: 15px;
 }
@@ -27,9 +29,9 @@
 
 /* Sidebar */
 .list-group-item.active {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: #fff;
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-contrast);
 }
 
 .list-group-item a {
@@ -55,7 +57,7 @@
     right: 0;
     bottom: 0;
     z-index: 1050; /* Higher than modal */
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: color-mix(in srgb, var(--surface) 70%, var(--bg) 30%);
     display: flex;
     align-items: center;
     justify-content: center;

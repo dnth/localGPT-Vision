@@ -23,27 +23,19 @@
         {% endfor %}
     </div>
     <div class="chat-input-container">
-        <form id="chat-form" enctype="multipart/form-data">
+        <form id="chat-form" enctype="multipart/form-data" aria-label="Send a message" aria-live="polite">
             <div class="input-group">
-                <input type="text" id="query" name="query" class="form-control" placeholder="Type your message...">
+                <input type="text" id="query" name="query" class="form-control" placeholder="Type your message..." autocomplete="off" aria-label="Message input">
                 <label class="input-group-text" for="file-upload">
                     <i class="fas fa-paperclip"></i>
                 </label>
                 <input type="file" id="file-upload" name="file" style="display: none;" multiple>
-                <button class="btn btn-primary" type="submit">
-                    <i class="fas fa-paper-plane"></i>
+                <button id="sendBtn" class="btn btn-primary" type="submit" aria-label="Send text">
+                    <i class="fas fa-paper-plane" aria-hidden="true"></i>
                 </button>
             </div>
         </form>
     </div>
-</div>
-
-<!-- Add this just before the closing </div> of the chat-container -->
-<div id="loading-indicator" class="text-center" style="display: none;">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-    <p>Generating response...</p>
 </div>
 
 <!-- Modal for indexing -->
@@ -186,11 +178,45 @@
 
         $('#chat-form').submit(function(e) {
             e.preventDefault();
-            var formData = new FormData(this);
-            formData.append('send_query', 'true');
 
-            // Show loading indicator
-            $('#loading-indicator').show();
+            // Prevent duplicate submissions
+            if ($('#sendBtn').prop('disabled')) return;
+
+            const $input = $('#query');
+            const originalText = ($input.val() || '').trim();
+            if (!originalText) return;
+
+            // Build formData explicitly from form to keep files; ensure send_query is set
+            var formData = new FormData(this);
+            formData.set('send_query', 'true');
+            formData.set('query', originalText); // ensure payload includes the original text
+
+            // Immediately render the user's message in the chat window
+            // Create a temporary user bubble so the user sees their text right away
+            var $tempUser = $('<div/>', {
+                class: 'message user-message pending',
+                text: originalText
+            });
+            $('#chat-messages').append($tempUser);
+            scrollToBottom();
+
+            // Immediately set submitting state: disable controls, set aria-busy, show spinners, clear input
+            $('#chat-form').attr('aria-busy', 'true');
+            $input.prop('disabled', true).attr('aria-disabled', 'true');
+            $('#sendBtn').prop('disabled', true).attr('aria-disabled', 'true');
+            // Show typing indicator in chat messages area
+            var $typingIndicator = $('<div/>', {
+                class: 'message ai-message typing-indicator',
+                id: 'typing-indicator-message',
+                'role': 'status',
+                'aria-live': 'polite',
+                'aria-label': 'Assistant is typing'
+            }).html('<div class="typing-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><span class="typing-text">Assistant is typing...</span>');
+            
+            $('#chat-messages').append($typingIndicator);
+            scrollToBottom();
+            // Clear input for instant UX feedback
+            $input.val('');
 
             $.ajax({
                 url: '{{ url_for("chat") }}',
@@ -199,9 +225,23 @@
                 processData: false,
                 contentType: false,
                 success: function(response) {
+                    if (!response || response.success !== true) {
+                        // Restore text on failure and remove the temporary bubble
+                        $tempUser.remove();
+                        $input.val(originalText);
+                        const msg = response && response.message ? response.message : 'Error generating response. Please try again.';
+                        alert(msg);
+                        return;
+                    }
+
+                    // Replace the temporary user bubble with server-rendered pair (user + assistant)
+                    // Since server returns both last user and assistant messages as HTML fragment,
+                    // we remove the temporary bubble and append the authoritative HTML.
+                    $tempUser.remove();
+                    $('#typing-indicator-message').remove();
                     $('#chat-messages').append(response.html);
                     scrollToBottom();
-                    $('#query').val('');
+                    // Clear file selection upon success
                     $('#file-upload').val('');
                     applyZoomToNewImages(); // Apply zoom to newly added images
 
@@ -212,11 +252,18 @@
                     }
                 },
                 error: function() {
+                    // Remove the temporary bubble and restore text on network/server error
+                    $tempUser.remove();
+                    $('#typing-indicator-message').remove();
+                    $input.val(originalText);
                     alert('Error generating response. Please try again.');
                 },
                 complete: function() {
-                    // Hide loading indicator
-                    $('#loading-indicator').hide();
+                    // Re-enable controls
+                    $('#chat-form').attr('aria-busy', 'false');
+                    $('#sendBtn').prop('disabled', false).removeAttr('aria-disabled');
+                    $input.prop('disabled', false).removeAttr('aria-disabled').focus();
+                    // Typing indicator is removed in success/error handlers
                 }
             });
         });

@@ -1,14 +1,77 @@
+/* Theming: CSS Variables */
+:root {
+    /* Neutrals */
+    --bg: #F8FAFC;
+    --surface: #FFFFFF;
+    --text: #0F172A;
+    --text-muted: #475569;
+    --border: #E5E7EB;
+
+    /* Brand */
+    --primary: #2563EB;
+    --primary-contrast: #FFFFFF;
+    --primary-hover: #1D4ED8;
+
+    --secondary: #64748B;
+    --secondary-contrast: #0F172A;
+    --secondary-hover: #475569;
+
+    --accent: #10B981;
+
+    /* Semantic */
+    --success: #16A34A;
+    --warning: #D97706;
+    --error: #DC2626;
+    --info: #0284C7;
+
+    /* Focus/Disabled */
+    --focus: #93C5FD;
+    --disabled-bg: #E5E7EB;
+    --disabled-text: #9CA3AF;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+    --bg: #0B1220;
+    --surface: #111827;
+    --text: #E5E7EB;
+    --text-muted: #94A3B8;
+    --border: #374151;
+
+    --primary: #60A5FA;
+    --primary-contrast: #0B1220;
+    --primary-hover: #93C5FD;
+
+    --secondary: #94A3B8;
+    --secondary-contrast: #0B1220;
+    --secondary-hover: #CBD5E1;
+
+    --accent: #34D399;
+
+    --success: #4ADE80;
+    --warning: #FBBF24;
+    --error: #F87171;
+    --info: #38BDF8;
+
+    --focus: #93C5FD;
+    --disabled-bg: #1F2937;
+    --disabled-text: #6B7280;
+}
+
+/* Base */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+    background-color: var(--bg);
+    color: var(--text);
     font-size: 14px;  /* Base font size */
 }
 
 /* Sidebar styles */
 #sidebar {
     min-height: 100vh;
-    background-color: #343a40;
-    color: #fff;
+    background-color: var(--surface);
+    color: var(--text);
+    border-right: 1px solid var(--border);
     transition: all 0.3s;
     display: flex;
     flex-direction: column;
@@ -20,11 +83,14 @@ body {
 
 #sidebar .sidebar-header {
     padding: 20px;
-    background: #212529;
+    /* Ensure high-contrast backdrop for white title text */
+    background: #0B1220; /* deep navy/near-black for light theme */
+    border-bottom: 1px solid var(--border);
 }
 
 #sidebar .sidebar-header h3 {
     font-size: 1.5em;  /* Larger font for header */
+    color: #FFFFFF; /* keep title white for strong contrast */
 }
 
 #sidebar .sidebar-content {
@@ -34,7 +100,7 @@ body {
 
 #sidebar ul.components {
     padding: 20px 0;
-    border-bottom: 1px solid #47748b;
+    border-bottom: 1px solid var(--border);
 }
 
 #sidebar ul p {
@@ -46,18 +112,19 @@ body {
     padding: 8px 10px;
     font-size: 1em;  /* Consistent font size */
     display: block;
-    color: #fff;
+    color: var(--text);
     text-decoration: none;
 }
 
 #sidebar ul li a:hover {
-    color: #7386D5;
-    background: #fff;
+    color: var(--primary);
+    background: var(--surface);
+    text-decoration: underline;
 }
 
 #sidebar ul li.active > a, a[aria-expanded="true"] {
-    color: #fff;
-    background: #6d7fcc;
+    color: var(--primary-contrast);
+    background: var(--primary);
 }
 
 .session-list {
@@ -86,13 +153,68 @@ main.active {
     font-size: 1em;  /* Consistent font size */
 }
 
+/* Themed button overrides to ensure consistency */
+.btn-primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: var(--primary-contrast) !important;
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: var(--primary-contrast) !important;
+}
+.btn-primary:focus {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    box-shadow: none !important;
+}
+.btn-primary:disabled,
+.btn-primary.disabled {
+    background-color: var(--disabled-bg) !important;
+    border-color: var(--disabled-bg) !important;
+    color: var(--disabled-text) !important;
+}
+
+/* Secondary buttons aligned to theme */
+.btn-secondary {
+    background-color: var(--secondary) !important;
+    border-color: var(--secondary) !important;
+    color: var(--secondary-contrast) !important;
+}
+.btn-secondary:hover,
+.btn-secondary:focus {
+    background-color: var(--secondary-hover) !important;
+    border-color: var(--secondary-hover) !important;
+    color: var(--secondary-contrast) !important;
+}
+.btn-outline-secondary {
+    color: var(--secondary) !important;
+    border-color: var(--secondary) !important;
+    background-color: transparent !important;
+}
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    color: var(--secondary-contrast) !important;
+    background-color: var(--secondary) !important;
+    border-color: var(--secondary) !important;
+}
+
+/* Input group send button icon alignment */
+.input-group .btn.btn-primary i {
+    vertical-align: middle;
+}
+
 /* Chat container styles */
 .chat-container {
     height: calc(100vh - 100px);
     display: flex;
     flex-direction: column;
-    background-color: #ffffff;
+    background-color: var(--surface);
+    color: var(--text);
     border-radius: 10px;
+    border: 1px solid var(--border);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
     margin: 20px auto;
     max-width: 800px;
@@ -106,8 +228,8 @@ main.active {
 
 .chat-input-container {
     padding: 20px;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
+    background-color: var(--bg);
+    border-top: 1px solid var(--border);
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
 }
@@ -128,15 +250,15 @@ main.active {
 }
 
 .user-message {
-    background-color: #007bff;
-    color: #fff;
+    background-color: var(--primary);
+    color: var(--primary-contrast);
     align-self: flex-end;
     margin-left: auto;
 }
 
 .ai-message {
-    background-color: #f1f3f5;
-    color: #343a40;
+    background-color: color-mix(in srgb, var(--text) 6%, var(--surface) 94%);
+    color: var(--text);
     align-self: flex-start;
     margin-right: auto;
 }
@@ -169,9 +291,11 @@ main.active {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1000;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: color-mix(in srgb, var(--surface) 90%, var(--bg) 10%);
+    color: var(--text);
     padding: 20px;
     border-radius: 10px;
+    border: 1px solid var(--border);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -206,7 +330,7 @@ main.active {
 }
 
 .session-name:hover {
-    color: #007bff;
+    color: var(--primary);
 }
 
 /* Responsive adjustments */
@@ -238,10 +362,29 @@ main.active {
     position: relative;
 }
 
+/* Optional utility: dark overlay for media/hero backgrounds to preserve title legibility */
+.overlay-dark-60 {
+    position: relative;
+}
+.overlay-dark-60::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    pointer-events: none;
+}
+.overlay-dark-80::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    pointer-events: none;
+}
+
 .fa-ellipsis-h {
     cursor: pointer;
     padding: 3px;
-    color: #adb5bd;
+    color: var(--text-muted);
     font-size: 1em;  /* Consistent font size */
 }
 
@@ -250,8 +393,8 @@ main.active {
     position: absolute;
     right: 0;
     top: 100%;
-    background-color: #343a40;
-    border: 1px solid #495057;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 4px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     z-index: 1000;
@@ -262,27 +405,28 @@ main.active {
     padding: 8px 12px;
     cursor: pointer;
     white-space: nowrap;
-    color: #fff;
-    transition: background-color 0.2s ease;
+    color: var(--text);
+    transition: background-color 0.2s ease, color 0.2s ease;
     font-size: 1em;  /* Consistent font size */
 }
 
 .option:hover {
-    background-color: #495057;
+    background-color: color-mix(in srgb, var(--primary) 10%, var(--surface) 90%);
+    color: var(--text);
 }
 
 .session-list .nav-item.current-session {
-    background-color: #495057;
+    background-color: color-mix(in srgb, var(--primary) 20%, var(--surface) 80%);
     border-radius: 4px;
 }
 
 .session-list .nav-item.current-session .nav-link {
-    color: #ffffff;
+    color: var(--primary-contrast);
     font-weight: bold;
 }
 
 .session-list .nav-item.current-session .fa-ellipsis-h {
-    color: #ffffff;
+    color: var(--primary-contrast);
 }
 
 /* Markdown styles */
@@ -307,8 +451,89 @@ main.active {
 }
 
 .ai-message pre {
-    background-color: #f0f0f0;
+    background-color: color-mix(in srgb, var(--text) 6%, var(--surface) 94%);
     padding: 10px;
     border-radius: 4px;
     overflow-x: auto;
+}
+
+/* Typing indicator styles - inline with chat messages */
+.typing-indicator {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 10px 15px;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.typing-dots .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    animation: typing-dot 1.4s infinite ease-in-out;
+    opacity: 0.4;
+}
+
+.typing-dots .dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dots .dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.typing-dots .dot:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes typing-dot {
+    0%, 80%, 100% {
+        transform: scale(0.6);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.typing-text {
+    user-select: none;
+    margin-left: 4px;
+}
+
+/* Fallback for reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .typing-dots .dot {
+        animation: none;
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    
+    .typing-text::after {
+        content: "...";
+        animation: none;
+    }
+}
+
+/* Responsive adjustments for typing indicator */
+@media (max-width: 576px) {
+    .typing-indicator {
+        font-size: 0.85em;
+        gap: 6px;
+    }
+    
+    .typing-dots .dot {
+        width: 5px;
+        height: 5px;
+    }
 }
