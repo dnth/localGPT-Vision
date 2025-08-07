@@ -91,7 +91,7 @@ def generate_response(images, query, session_id, resized_height=280, resized_wid
             )
             logger.info("Response generated using Qwen model.")
             return output_text[0], valid_images
-        
+         
         elif model_choice == 'gemini':
             model, _ = load_model('gemini')
             
@@ -122,6 +122,48 @@ def generate_response(images, query, session_id, resized_height=280, resized_wid
             
             except Exception as e:
                 logger.error(f"Error in Gemini processing: {str(e)}", exc_info=True)
+                return f"An error occurred while processing the images: {str(e)}", []
+        
+        elif model_choice == 'gemini2':
+            # Use googleapis/python-genai SDK
+            try:
+                client, model_name = load_model('gemini2')
+                # Build contents list: text first, then images as Parts
+                from google.genai import types as genai_types  # type: ignore
+                contents = [query]
+                for img_path in valid_images:
+                    if os.path.exists(img_path):
+                        try:
+                            # Prefer bytes to avoid PIL side effects; detect mime from extension
+                            with open(img_path, "rb") as f:
+                                data = f.read()
+                            ext = os.path.splitext(img_path)[1].lower()
+                            mime = "image/jpeg"
+                            if ext in [".png"]:
+                                mime = "image/png"
+                            elif ext in [".webp"]:
+                                mime = "image/webp"
+                            # Append as Part.from_bytes per SDK examples
+                            contents.append(genai_types.Part.from_bytes(data=data, mime_type=mime))
+                        except Exception as e:
+                            logger.error(f"Error reading image {img_path}: {e}")
+                    else:
+                        logger.warning(f"Image file not found: {img_path}")
+                
+                if len(contents) == 1:
+                    return "No images could be loaded for analysis.", []
+                
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                )
+                text = getattr(response, "text", None)
+                if text:
+                    logger.info("Response generated using Gemini 2 provider.")
+                    return text, valid_images
+                return "The Gemini 2 model did not generate any text response.", []
+            except Exception as e:
+                logger.error(f"Error in Gemini 2 processing: {str(e)}", exc_info=True)
                 return f"An error occurred while processing the images: {str(e)}", []
         
         elif model_choice == 'gpt4':
@@ -261,7 +303,7 @@ def generate_response(images, query, session_id, resized_height=280, resized_wid
                 with torch.no_grad():  # Disable gradient calculation
                     output = model.generate_from_batch(
                         inputs,
-                        GenerationConfig(max_new_tokens=200, stop_strings="<|endoftext|>"),
+                        GenerationConfig(max_new_tokens=200, stop_strings=""),
                         tokenizer=processor.tokenizer
                     )
 

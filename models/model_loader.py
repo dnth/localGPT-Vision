@@ -7,6 +7,7 @@ from transformers import MllamaForConditionalGeneration
 from vllm.sampling_params import SamplingParams
 from transformers import AutoModelForCausalLM
 import google.generativeai as genai
+from google import genai as genai2  # Google Gen AI SDK (python-genai)
 from vllm import LLM
 from groq import Groq
 from dotenv import load_dotenv
@@ -65,7 +66,7 @@ def load_model(model_choice):
         _model_cache[model_choice] = (model, processor, device)
         logger.info("Qwen model loaded and cached.")
         return _model_cache[model_choice]
-
+    
     elif model_choice == 'gemini':
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -73,6 +74,20 @@ def load_model(model_choice):
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash-002')
         return model, None
+
+    elif model_choice == 'gemini2':
+        # Prefer GEMINI_API_KEY if set, otherwise fallback to GOOGLE_API_KEY for compatibility
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found in environment")
+        # Instantiate client using python-genai SDK
+        client = genai2.Client(api_key=api_key)
+        # Allow overriding model via env, default to a current public model
+        model_name = os.getenv("GEMINI2_MODEL", "gemini-2.5-flash")
+        # Return client and chosen model name
+        _model_cache[model_choice] = (client, model_name)
+        logger.info("Gemini 2 provider (python-genai) initialized and cached.")
+        return _model_cache[model_choice]
 
     elif model_choice == 'llama-vision':
         device = detect_device()
