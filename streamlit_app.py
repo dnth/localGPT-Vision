@@ -242,6 +242,35 @@ def retrieve_image_paths_for_current_session(query: str, k: int = 3) -> List[str
             return []
     return retrieve_documents(rag, query, sid, k=k)  # returns relative paths from static folder
 
+def render_images_horizontally(images: List[str], max_width: int = 200):
+    """
+    Render a list of images horizontally in a single row using st.columns().
+    
+    Args:
+        images: List of relative image paths from static folder
+        max_width: Maximum width for each image in pixels
+    """
+    if not images:
+        return
+    
+    # Create columns for horizontal layout - one column per image
+    num_images = len(images)
+    if num_images == 1:
+        # Single image - use a narrower column to prevent it from being too large
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            img_path = os.path.join(STATIC_FOLDER, images[0])
+            if os.path.exists(img_path):
+                st.image(img_path, width=max_width)
+    else:
+        # Multiple images - create equal columns
+        cols = st.columns(num_images)
+        for i, rel_path in enumerate(images):
+            img_path = os.path.join(STATIC_FOLDER, rel_path)
+            if os.path.exists(img_path):
+                with cols[i]:
+                    st.image(img_path, width=max_width)
+
 def render_chat_history(chat_history: List[Dict[str, Any]]):
     for msg in chat_history:
         role = msg.get("role")
@@ -254,14 +283,9 @@ def render_chat_history(chat_history: List[Dict[str, Any]]):
             with st.chat_message("assistant"):
                 # Render HTML content
                 st.markdown(content, unsafe_allow_html=True)
-                # Render images if any
-                for rel in images:
-                    img_path = os.path.join(STATIC_FOLDER, rel)
-                    if os.path.exists(img_path):
-                        # Use a narrow column to constrain display size while preserving original image
-                        col1, col2 = st.columns([1, 4])
-                        with col1:
-                            st.image(img_path)
+                # Render images horizontally if any
+                if images:
+                    render_images_horizontally(images, max_width=280)
 
 def sidebar_ui():
     st.sidebar.title("Sessions")
@@ -401,13 +425,9 @@ def chat_ui():
                     st.write(query)
                 with st.chat_message("assistant"):
                     st.markdown(str(parsed_response), unsafe_allow_html=True)
-                    for rel in retrieved_images:
-                        img_path = os.path.join(STATIC_FOLDER, rel)
-                        if os.path.exists(img_path):
-                            # Use a narrow column to constrain display size while preserving original image
-                            col1, col2 = st.columns([1, 4])
-                            with col1:
-                                st.image(img_path)
+                    # Render retrieved images horizontally
+                    if retrieved_images:
+                        render_images_horizontally(retrieved_images, max_width=280)
             except Exception as e:
                 st.error(f"An error occurred while generating the response: {e}")
 
