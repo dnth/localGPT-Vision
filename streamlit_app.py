@@ -698,8 +698,8 @@ def main():
     sidebar_ui()
 
     # Main sections
-    st.title("LocalGPT-Vision (Streamlit)")
-    st.caption("Streamlit implementation with separate storage: sessions_streamlit, uploaded_documents_streamlit, static/images_streamlit, .byaldi_streamlit")
+    st.title("LocalGPT-Vision")
+    st.caption("Your personal AI assistant for multimodal document understanding.")
 
     upload_ui()
     st.markdown("---")
